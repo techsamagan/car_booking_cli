@@ -3,36 +3,39 @@ package com.samagan.car;
 import java.util.UUID;
 
 public class CarService {
-    private final CarDao carDao = new CarDao();
 
-    public Car getCarByRegNumber(String regNum){
+    private final CarDao carDao;
 
-        return carDao.getCarByRegNumber(regNum);
+    public CarService(CarDao carDao) {
+        this.carDao = carDao;
     }
 
-    public Car getCarById(UUID id){
-
-        return carDao.getCarById(id);
+    public Car getCarByRegNumber(String regNum) {
+        return carDao.findCarByRegNumber(regNum);
     }
 
-    public Car[] getAllCars(){
-        return carDao.getAllCars();
+    public Car getCarById(UUID id) {
+        return carDao.findCarById(id);
+    }
+
+    public Car[] getAllCars() {
+        return carDao.getCars();
     }
 
     public Car[] getAllElectricCars() {
-        Car[] all = carDao.getAllCars();
+        Car[] all = carDao.getCars();
+
         int count = 0;
 
-        // 1. Count how many are electric
         for (Car car : all) {
             if (car != null && car.isElectric()) {
                 count++;
             }
         }
 
-        // 2. Populate result using a separate pointer
         Car[] result = new Car[count];
         int index = 0;
+
         for (Car car : all) {
             if (car != null && car.isElectric()) {
                 result[index++] = car;
@@ -41,6 +44,4 @@ public class CarService {
 
         return result;
     }
-
-
 }

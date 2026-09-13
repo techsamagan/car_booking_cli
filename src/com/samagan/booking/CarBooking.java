@@ -3,13 +3,14 @@ package com.samagan.booking;
 import com.samagan.car.Car;
 import com.samagan.user.User;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-public class CarBooking {
+public class CarBooking implements Serializable {
 
     private UUID id;
     private User user;
@@ -32,6 +33,9 @@ public class CarBooking {
     }
 
     public CarBooking(UUID id, User user, Car car, LocalDate startDate, LocalDate endDate, BigDecimal price, LocalDate now) {
+    }
+
+    public CarBooking(UUID bookingId, UUID userId, UUID carId, LocalDate startDate, LocalDate endDate, BookingStatus status) {
     }
 
     public UUID getId() {

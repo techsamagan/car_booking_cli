@@ -1,13 +1,21 @@
+package com.samagan;
+
 import com.samagan.booking.CarBooking;
+import com.samagan.booking.CarBookingArrayDataAccessService;
+import com.samagan.booking.CarBookingDao;
+import com.samagan.booking.CarBookingFileDataAccessService;
 import com.samagan.booking.CarBookingService;
 import com.samagan.car.Car;
+import com.samagan.car.CarArrayDataAccessService;
+import com.samagan.car.CarDao;
 import com.samagan.car.CarService;
 import com.samagan.user.User;
+import com.samagan.user.UserArrayDataAccessService;
+import com.samagan.user.UserDao;
 import com.samagan.user.UserService;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.Locale;
 import java.util.Scanner;
 import java.util.UUID;
 
@@ -19,11 +27,20 @@ public class Main {
         boolean keepRunning = true;
         Scanner scanner = new Scanner(System.in);
 
-        UserService userService = new UserService();
-        CarService carService = new CarService();
-        CarBookingService bookingService = new CarBookingService();
+        // Wiring & Dependency Injection
+        UserDao userDao = new UserArrayDataAccessService();
+        CarDao carDao = new CarArrayDataAccessService();
+
+        // One-line persistence swap:
+        CarBookingDao carBookingDao = new CarBookingArrayDataAccessService();
+        // CarBookingDao carBookingDao = new CarBookingFileDataAccessService("bookings.csv");
+
+        UserService userService = new UserService(userDao);
+        CarService carService = new CarService(carDao);
+        CarBookingService bookingService = new CarBookingService(carBookingDao, userService, carService);
 
         String menu = """
+        
         1 - Book a car
         2 - Delete booking
         3 - View user bookings
@@ -33,10 +50,13 @@ public class Main {
         7 - View all users
         8 - Exit
         """;
+
         while (keepRunning) {
             System.out.println(menu);
-            switch (scanner.nextLine().trim()) {
-                case "1":
+            System.out.print("Select an option: ");
+            String choice = scanner.nextLine().trim();
+
+            switch (choice) {
                 case "1":
                     try {
                         System.out.print("Enter userId: ");
@@ -62,105 +82,117 @@ public class Main {
                     }
                     break;
 
-                    case "2":
-                        System.out.print("Enter booking ID to cancel: ");
-                        String bookingIdInput = scanner.nextLine().trim();
+                case "2":
+                    System.out.print("Enter booking ID to cancel: ");
+                    String bookingIdInput = scanner.nextLine().trim();
+                    try {
+                        UUID bookingId = UUID.fromString(bookingIdInput);
+                        bookingService.deleteBooking(bookingId);
+                        System.out.println("Booking " + bookingId + " has been cancelled successfully.");
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Invalid UUID format: " + bookingIdInput);
+                    } catch (IllegalStateException e) {
+                        System.out.println("Cancellation failed: " + e.getMessage());
+                    }
+                    break;
 
-                        try {
-                            UUID bookingId = UUID.fromString(bookingIdInput);
-                            bookingService.deleteBooking(bookingId);
-                            System.out.println("Booking " + bookingId + " has been cancelled successfully.");
-                        } catch (IllegalArgumentException e) {
-                            System.out.println("Invalid UUID format: " + bookingIdInput);
-                        } catch (IllegalStateException e) {
-                            System.out.println("Cancellation failed: " + e.getMessage());
-                        }
-                        break;
+                case "3":
+                    System.out.print("Enter user ID: ");
+                    String userIdInput = scanner.nextLine().trim();
+                    try {
+                        UUID userBookingId = UUID.fromString(userIdInput);
+                        CarBooking[] userBookings = bookingService.getUserBookings(userBookingId);
 
-                        case "3":
-                            System.out.print("Enter user ID: ");
-                            String userIdInput = scanner.nextLine().trim();
-                            try {
-                                UUID userBookingId = UUID.fromString(userIdInput);
-                                CarBooking[] userBookings = bookingService.getUserBookings(userBookingId);
-
-                                if (userBookings.length == 0) {
-                                    System.out.println("No bookings found for user: " + userBookingId);
-                                } else {
-                                    System.out.println("Bookings for user " + userBookingId + ":");
-                                    for (CarBooking booking : userBookings) {
-                                        if (booking != null) {
-                                            System.out.println(booking);
-                                        }
-                                    }
+                        if (userBookings.length == 0) {
+                            System.out.println("No bookings found for user: " + userBookingId);
+                        } else {
+                            System.out.println("Bookings for user " + userBookingId + ":");
+                            for (CarBooking booking : userBookings) {
+                                if (booking != null) {
+                                    System.out.println(booking);
                                 }
-                            } catch (IllegalArgumentException e) {
-                                System.out.println("Invalid UUID format: " + userIdInput);
                             }
-                            break;
+                        }
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Invalid UUID format: " + userIdInput);
+                    }
+                    break;
 
-                            case "4":
-                                System.out.println("All bookings: ");
-                                CarBooking[] bookings = bookingService.getAllBooking();
-                                boolean hasBookings = false;
+                case "4":
+                    System.out.println("All bookings:");
+                    CarBooking[] bookings = bookingService.getAllBookings();
+                    boolean hasBookings = false;
 
-                                for (CarBooking booking : bookings) {
-                                    if (booking != null) {
-                                        System.out.println(booking);
-                                        hasBookings = true;
-                                    }
-                                }
+                    for (CarBooking booking : bookings) {
+                        if (booking != null) {
+                            System.out.println(booking);
+                            hasBookings = true;
+                        }
+                    }
 
-                                if (!hasBookings) {
-                                    System.out.println("No bookings found.");
-                                }
-                                break;
+                    if (!hasBookings) {
+                        System.out.println("No bookings found.");
+                    }
+                    break;
 
-                                case "5":
-                                    Car[] allCars = carService.getAllCars();
-                                    Car[] availableCars = bookingService.getAvailableCars(allCars);
+                case "5":
+                    Car[] allCars = carService.getAllCars();
+                    Car[] availableCars = bookingService.getAvailableCars(allCars);
 
-                                    if (availableCars.length == 0) {
-                                        System.out.println("No cars available at the moment.");
-                                    } else {
-                                        System.out.println("Available cars:");
-                                        for (Car car : availableCars) {
-                                            System.out.println(car);
-                                        }
-                                    }
-                                    break;
+                    if (availableCars.length == 0) {
+                        System.out.println("No cars available at the moment.");
+                    } else {
+                        System.out.println("Available cars:");
+                        for (Car car : availableCars) {
+                            System.out.println(car);
+                        }
+                    }
+                    break;
 
-                                    case "6":
-                                        System.out.println("All Electric cars: ");
-                                        Car[] electricCars = carService.getAllElectricCars();
-                                        if (electricCars.length == 0) {
-                                            System.out.println("No electric cars found.");
-                                        } else {
-                                            for (Car car : electricCars) {
-                                                if (car != null) {
-                                                    System.out.println(car);
-                                                }
-                                            }
-                                        }
-                                        break;
+                case "6":
+                    Car[] all = carService.getAllCars();
+                    Car[] available = bookingService.getAvailableCars(all);
 
-                                        case "7":
-                                            System.out.println("All users: ");
-                                            User[] users = userService.getAllUser();
-                                            for (User user : users) {
-                                                if (user != null) {
-                                                    System.out.println(user);
-                                                }
-                                            }
-                                            break;
+                    int electricCount = 0;
+                    for (Car car : available) {
+                        if (car != null && car.isElectric()) {
+                            electricCount++;
+                        }
+                    }
 
-                                            case "8":
-                                                keepRunning = false;
-                                                break;
+                    if (electricCount == 0) {
+                        System.out.println("No available electric cars found.");
+                    } else {
+                        System.out.println("Available electric cars:");
+                        for (Car car : available) {
+                            if (car != null && car.isElectric()) {
+                                System.out.println(car);
+                            }
+                        }
+                    }
+                    break;
+
+                case "7":
+                    System.out.println("All users:");
+                    User[] users = userService.getAllUser();
+                    for (User user : users) {
+                        if (user != null) {
+                            System.out.println(user);
+                        }
+                    }
+                    break;
+
+                case "8":
+                    keepRunning = false;
+                    System.out.println("Exiting application...");
+                    break;
+
+                default:
+                    System.out.println("Invalid option. Please enter a number between 1 and 8.");
+                    break;
             }
         }
 
         scanner.close();
-
     }
 }
