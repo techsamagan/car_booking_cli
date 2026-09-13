@@ -1,0 +1,304 @@
+package com.samagan.booking;
+
+import com.samagan.car.Car;
+import com.samagan.car.CarDao;
+import com.samagan.user.User;
+import com.samagan.user.UserDao;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Scanner;
+import java.util.UUID;
+
+public class CarBookingFileDataAccessService implements CarBookingDao {
+
+    private static final int CAPACITY = 100;
+
+    private final File file;
+    private final UserDao userDao;
+    private final CarDao carDao;
+
+    public CarBookingFileDataAccessService(
+            String filePath,
+            UserDao userDao,
+            CarDao carDao
+    ) {
+        if (filePath == null || filePath.isBlank()) {
+            throw new IllegalArgumentException("File path cannot be empty.");
+        }
+
+        if (userDao == null) {
+            throw new IllegalArgumentException("UserDao cannot be null.");
+        }
+
+        if (carDao == null) {
+            throw new IllegalArgumentException("CarDao cannot be null.");
+        }
+
+        this.file = new File(filePath);
+        this.userDao = userDao;
+        this.carDao = carDao;
+
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Could not create bookings file: " + filePath,
+                    e
+            );
+        }
+    }
+
+    @Override
+    public CarBooking[] getBookings() {
+        int count = 0;
+
+        // First pass: count valid/non-empty lines
+        try (Scanner scanner = new Scanner(file)) {
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+
+                if (!line.isEmpty()) {
+                    count++;
+                }
+            }
+
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Failed to read bookings from file.",
+                    e
+            );
+        }
+
+        CarBooking[] bookings = new CarBooking[count];
+        int index = 0;
+
+        // Second pass: convert lines into CarBooking objects
+        try (Scanner scanner = new Scanner(file)) {
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine().trim();
+
+                if (!line.isEmpty()) {
+                    bookings[index++] = parseLine(line);
+                }
+            }
+
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Failed to parse bookings from file.",
+                    e
+            );
+        }
+
+        return bookings;
+    }
+
+    @Override
+    public CarBooking findBookingById(UUID bookingId) {
+        if (bookingId == null) {
+            return null;
+        }
+
+        CarBooking[] bookings = getBookings();
+
+        for (CarBooking booking : bookings) {
+
+            if (bookingId.equals(booking.getId())) {
+                return booking;
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public void saveBooking(CarBooking booking) {
+        if (booking == null) {
+            throw new IllegalArgumentException(
+                    "Booking cannot be null."
+            );
+        }
+
+        CarBooking[] current = getBookings();
+
+        if (current.length >= CAPACITY) {
+            throw new IllegalStateException(
+                    "Booking storage capacity reached (" + CAPACITY + ")."
+            );
+        }
+
+        CarBooking[] updated =
+                new CarBooking[current.length + 1];
+
+        System.arraycopy(
+                current,
+                0,
+                updated,
+                0,
+                current.length
+        );
+
+        updated[updated.length - 1] = booking;
+
+        writeAll(updated);
+    }
+
+    @Override
+    public void deleteBooking(UUID bookingId) {
+        if (bookingId == null) {
+            throw new IllegalArgumentException(
+                    "Booking ID cannot be null."
+            );
+        }
+
+        CarBooking[] bookings = getBookings();
+        boolean found = false;
+
+        for (CarBooking booking : bookings) {
+
+            if (bookingId.equals(booking.getId())) {
+
+                booking.setBookingStatus(
+                        BookingStatus.CANCELLED
+                );
+
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            throw new IllegalStateException(
+                    "Booking with ID " +
+                            bookingId +
+                            " not found."
+            );
+        }
+
+        writeAll(bookings);
+    }
+
+    private void writeAll(CarBooking[] bookings) {
+
+        try (
+                PrintWriter writer =
+                        new PrintWriter(
+                                new FileWriter(file, false)
+                        )
+        ) {
+
+            for (CarBooking booking : bookings) {
+
+                if (booking == null) {
+                    continue;
+                }
+
+                writer.println(
+                        booking.getId() + "," +
+                                booking.getUser().getId() + "," +
+                                booking.getCar().getId() + "," +
+                                booking.getStartDate() + "," +
+                                booking.getEndDate() + "," +
+                                booking.getPrice() + "," +
+                                booking.getBookingStatus() + "," +
+                                booking.getBookedAt()
+                );
+            }
+
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                    "Failed to write bookings to file.",
+                    e
+            );
+        }
+    }
+
+    private CarBooking parseLine(String line) {
+
+        String[] parts = line.split(",");
+
+        if (parts.length != 8) {
+            throw new IllegalStateException(
+                    "Invalid booking record: " + line
+            );
+        }
+
+        try {
+            UUID bookingId =
+                    UUID.fromString(parts[0].trim());
+
+            UUID userId =
+                    UUID.fromString(parts[1].trim());
+
+            UUID carId =
+                    UUID.fromString(parts[2].trim());
+
+            LocalDate startDate =
+                    LocalDate.parse(parts[3].trim());
+
+            LocalDate endDate =
+                    LocalDate.parse(parts[4].trim());
+
+            BigDecimal price =
+                    new BigDecimal(parts[5].trim());
+
+            BookingStatus status =
+                    BookingStatus.valueOf(
+                            parts[6].trim()
+                    );
+
+            LocalDateTime bookedAt =
+                    LocalDateTime.parse(
+                            parts[7].trim()
+                    );
+
+            User user =
+                    userDao.findUserById(userId);
+
+            if (user == null) {
+                throw new IllegalStateException(
+                        "User with ID " +
+                                userId +
+                                " not found."
+                );
+            }
+
+            Car car =
+                    carDao.findCarById(carId);
+
+            if (car == null) {
+                throw new IllegalStateException(
+                        "Car with ID " +
+                                carId +
+                                " not found."
+                );
+            }
+
+            return new CarBooking(
+                    bookingId,
+                    user,
+                    car,
+                    startDate,
+                    endDate,
+                    price,
+                    status,
+                    bookedAt
+            );
+
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "Invalid booking data: " + line,
+                    e
+            );
+        }
+    }
+}
