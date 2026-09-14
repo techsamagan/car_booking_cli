@@ -1,18 +1,21 @@
 package com.samagan.booking;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class CarBookingArrayDataAccessService implements CarBookingDao {
 
     private static final int CAPACITY = 100;
+    private final List<CarBooking> bookings;
 
-    private final CarBooking[] bookings = new CarBooking[CAPACITY];
-    private int size = 0;
+    public CarBookingArrayDataAccessService() {
+        this.bookings = new ArrayList<>(CAPACITY);
+    }
 
     @Override
-    public CarBooking[] getBookings() {
-        return Arrays.copyOf(bookings, size);
+    public List<CarBooking> getBookings() {
+        return new ArrayList<>(bookings);
     }
 
     @Override
@@ -21,14 +24,11 @@ public class CarBookingArrayDataAccessService implements CarBookingDao {
             return null;
         }
 
-        for (int i = 0; i < size; i++) {
-            CarBooking booking = bookings[i];
-
-            if (bookingId.equals(booking.getId())) {
+        for (CarBooking booking : bookings) {
+            if (booking != null && bookingId.equals(booking.getId())) {
                 return booking;
             }
         }
-
         return null;
     }
 
@@ -38,25 +38,26 @@ public class CarBookingArrayDataAccessService implements CarBookingDao {
             throw new IllegalArgumentException("Booking cannot be null.");
         }
 
-        if (size >= CAPACITY) {
-            throw new IllegalStateException(
-                    "Booking storage capacity reached (" + CAPACITY + ")."
-            );
+        if (bookings.size() >= CAPACITY) {
+            throw new IllegalStateException("Booking storage capacity reached (" + CAPACITY + ").");
         }
 
-        bookings[size++] = booking;
+        bookings.add(booking);
     }
 
     @Override
     public void deleteBooking(UUID bookingId) {
-        CarBooking booking = findBookingById(bookingId);
-
-        if (booking == null) {
-            throw new IllegalStateException(
-                    "Booking with ID " + bookingId + " not found."
-            );
+        if (bookingId == null) {
+            throw new IllegalArgumentException("Booking ID cannot be null.");
         }
 
-        booking.setBookingStatus(BookingStatus.CANCELLED);
+        for (CarBooking booking : bookings) {
+            if (booking != null && bookingId.equals(booking.getId())) {
+                booking.setBookingStatus(BookingStatus.CANCELLED);
+                return;
+            }
+        }
+
+        throw new IllegalStateException("Booking with ID " + bookingId + " not found.");
     }
 }

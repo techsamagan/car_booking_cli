@@ -1,12 +1,12 @@
 package com.samagan.car;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 public class CarArrayDataAccessService implements CarDao {
 
-    private static final Car[] CARS = new Car[]{
+    private static final List<Car> CARS = List.of(
             new Car(
                     UUID.fromString("123e4567-e89b-12d3-a456-426614174000"),
                     "1234",
@@ -28,11 +28,11 @@ public class CarArrayDataAccessService implements CarDao {
                     Brand.MERCEDES,
                     false
             )
-    };
+    );
 
     @Override
-    public Car[] getCars() {
-        return Arrays.copyOf(CARS, CARS.length);
+    public List<Car> getCars() {
+        return CARS;
     }
 
     @Override
@@ -52,12 +52,12 @@ public class CarArrayDataAccessService implements CarDao {
 
     @Override
     public Car findCarByRegNumber(String regNum) {
-        if (regNum == null) {
+        if (regNum == null || regNum.isBlank()) {
             return null;
         }
 
         for (Car car : CARS) {
-            if (regNum.equals(car.getRegNumber())) {
+            if (regNum.equalsIgnoreCase(car.getRegNumber())) {
                 return car;
             }
         }
