@@ -16,6 +16,7 @@ import com.samagan.user.UserService;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
 
@@ -31,9 +32,9 @@ public class Main {
         UserDao userDao = new UserArrayDataAccessService();
         CarDao carDao = new CarArrayDataAccessService();
 
-        // One-line persistence swap:
+        // Easily swap DAO implementations:
         CarBookingDao carBookingDao = new CarBookingArrayDataAccessService();
-        // CarBookingDao carBookingDao = new CarBookingFileDataAccessService("bookings.csv");
+        // CarBookingDao carBookingDao = new CarBookingFileDataAccessService("bookings.csv", userDao, carDao);
 
         UserService userService = new UserService(userDao);
         CarService carService = new CarService(carDao);
@@ -101,9 +102,9 @@ public class Main {
                     String userIdInput = scanner.nextLine().trim();
                     try {
                         UUID userBookingId = UUID.fromString(userIdInput);
-                        CarBooking[] userBookings = bookingService.getUserBookings(userBookingId);
+                        List<CarBooking> userBookings = bookingService.getUserBookings(userBookingId);
 
-                        if (userBookings.length == 0) {
+                        if (userBookings.isEmpty()) {
                             System.out.println("No bookings found for user: " + userBookingId);
                         } else {
                             System.out.println("Bookings for user " + userBookingId + ":");
@@ -120,26 +121,24 @@ public class Main {
 
                 case "4":
                     System.out.println("All bookings:");
-                    CarBooking[] bookings = bookingService.getAllBookings();
-                    boolean hasBookings = false;
+                    List<CarBooking> bookings = bookingService.getAllBookings();
 
-                    for (CarBooking booking : bookings) {
-                        if (booking != null) {
-                            System.out.println(booking);
-                            hasBookings = true;
-                        }
-                    }
-
-                    if (!hasBookings) {
+                    if (bookings.isEmpty()) {
                         System.out.println("No bookings found.");
+                    } else {
+                        for (CarBooking booking : bookings) {
+                            if (booking != null) {
+                                System.out.println(booking);
+                            }
+                        }
                     }
                     break;
 
                 case "5":
-                    Car[] allCars = carService.getAllCars();
-                    Car[] availableCars = bookingService.getAvailableCars(allCars);
+                    List<Car> allCars = carService.getAllCars();
+                    List<Car> availableCars = bookingService.getAvailableCars(allCars);
 
-                    if (availableCars.length == 0) {
+                    if (availableCars.isEmpty()) {
                         System.out.println("No cars available at the moment.");
                     } else {
                         System.out.println("Available cars:");
@@ -150,34 +149,33 @@ public class Main {
                     break;
 
                 case "6":
-                    Car[] all = carService.getAllCars();
-                    Car[] available = bookingService.getAvailableCars(all);
+                    List<Car> all = carService.getAllCars();
+                    List<Car> available = bookingService.getAvailableCars(all);
 
-                    int electricCount = 0;
-                    for (Car car : available) {
-                        if (car != null && car.isElectric()) {
-                            electricCount++;
-                        }
-                    }
+                    List<Car> availableElectric = available.stream()
+                            .filter(car -> car != null && car.isElectric())
+                            .toList();
 
-                    if (electricCount == 0) {
+                    if (availableElectric.isEmpty()) {
                         System.out.println("No available electric cars found.");
                     } else {
                         System.out.println("Available electric cars:");
-                        for (Car car : available) {
-                            if (car != null && car.isElectric()) {
-                                System.out.println(car);
-                            }
+                        for (Car car : availableElectric) {
+                            System.out.println(car);
                         }
                     }
                     break;
 
                 case "7":
                     System.out.println("All users:");
-                    User[] users = userService.getAllUser();
-                    for (User user : users) {
-                        if (user != null) {
-                            System.out.println(user);
+                    List<User> users = userService.getAllUsers();
+                    if (users.isEmpty()) {
+                        System.out.println("No users registered.");
+                    } else {
+                        for (User user : users) {
+                            if (user != null) {
+                                System.out.println(user);
+                            }
                         }
                     }
                     break;
