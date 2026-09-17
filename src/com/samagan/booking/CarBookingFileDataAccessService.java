@@ -80,13 +80,10 @@ public class CarBookingFileDataAccessService implements CarBookingDao {
         if (bookingId == null) {
             return null;
         }
-
-        for (CarBooking booking : getBookings()) {
-            if (bookingId.equals(booking.getId())) {
-                return booking;
-            }
-        }
-        return null;
+        return getBookings().stream()
+                .filter(booking -> booking.getId().equals(bookingId))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -111,20 +108,13 @@ public class CarBookingFileDataAccessService implements CarBookingDao {
         }
 
         List<CarBooking> bookings = getBookings();
-        boolean found = false;
 
-        for (CarBooking booking : bookings) {
-            if (bookingId.equals(booking.getId())) {
-                booking.setBookingStatus(BookingStatus.CANCELLED);
-                found = true;
-                break;
-            }
-        }
+        CarBooking targetBooking = bookings.stream()
+                .filter(booking -> booking != null && bookingId.equals(booking.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Booking with ID " + bookingId + " not found."));
 
-        if (!found) {
-            throw new IllegalStateException("Booking with ID " + bookingId + " not found.");
-        }
-
+        targetBooking.setBookingStatus(BookingStatus.CANCELLED);
         writeAll(bookings);
     }
 

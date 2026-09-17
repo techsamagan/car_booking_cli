@@ -41,13 +41,10 @@ public class CarArrayDataAccessService implements CarDao {
             return null;
         }
 
-        for (Car car : CARS) {
-            if (carId.equals(car.getId())) {
-                return car;
-            }
-        }
-
-        return null;
+        return CARS.stream()
+                .filter(car -> car.getId().equals(carId))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -56,12 +53,9 @@ public class CarArrayDataAccessService implements CarDao {
             return null;
         }
 
-        for (Car car : CARS) {
-            if (regNum.equalsIgnoreCase(car.getRegNumber())) {
-                return car;
-            }
-        }
-
-        return null;
+        return CARS.stream()
+                .filter(car -> car.getRegNumber().equals(regNum))
+                .findFirst()
+                .orElse(null);
     }
 }

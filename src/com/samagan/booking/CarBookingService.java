@@ -91,14 +91,18 @@ public class CarBookingService {
             return List.of();
         }
 
-        List<CarBooking> userBookings = new ArrayList<>();
-        for (CarBooking booking : carBookingDao.getBookings()) {
-            if (booking != null && booking.getUser() != null && id.equals(booking.getUser().getId())) {
-                userBookings.add(booking);
-            }
+        List<CarBooking> bookings = carBookingDao.getBookings();
+        if (bookings == null) {
+            return List.of();
         }
-        return userBookings;
+
+        return bookings.stream()
+                .filter(booking -> booking != null
+                        && booking.getUser() != null
+                        && id.equals(booking.getUser().getId()))
+                .toList();
     }
+
 
     public List<CarBooking> getAllBookings() {
         return carBookingDao.getBookings();
@@ -109,15 +113,11 @@ public class CarBookingService {
             return false;
         }
 
-        for (CarBooking booking : activeBookings) {
-            if (booking != null
-                    && booking.getBookingStatus() == BookingStatus.ACTIVE
-                    && booking.getCar() != null
-                    && carId.equals(booking.getCar().getId())) {
-                return true;
-            }
-        }
-        return false;
+        return activeBookings.stream()
+                .anyMatch(booking -> booking != null
+                        && booking.getBookingStatus() == BookingStatus.ACTIVE
+                        && booking.getCar() != null
+                        && carId.equals(booking.getCar().getId()));
     }
 
     public List<Car> getAvailableCars(List<Car> allCars) {
@@ -126,14 +126,8 @@ public class CarBookingService {
         }
 
         List<CarBooking> bookings = carBookingDao.getBookings();
-        List<Car> availableCars = new ArrayList<>();
-
-        for (Car car : allCars) {
-            if (car != null && !isCarBooked(car.getId(), bookings)) {
-                availableCars.add(car);
-            }
-        }
-
-        return availableCars;
+        return allCars.stream()
+                .filter(car -> car != null && !isCarBooked(car.getId(), bookings))
+                .toList();
     }
 }

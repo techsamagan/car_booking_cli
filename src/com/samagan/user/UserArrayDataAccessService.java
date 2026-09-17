@@ -21,11 +21,10 @@ public class UserArrayDataAccessService implements UserDao {
             return null;
         }
 
-        for (User user : USERS) {
-            if (user.getId().equals(userId)) {
-                return user;
-            }
-        }
-        return null;
+        return USERS.stream()
+                .filter(user -> user.getId().equals(userId))
+                .findFirst()
+                .orElse(null);
+
     }
 }

@@ -23,13 +23,10 @@ public class CarBookingArrayDataAccessService implements CarBookingDao {
         if (bookingId == null) {
             return null;
         }
-
-        for (CarBooking booking : bookings) {
-            if (booking != null && bookingId.equals(booking.getId())) {
-                return booking;
-            }
-        }
-        return null;
+        return bookings.stream()
+                .filter(book -> book.getId().equals(bookingId))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -51,13 +48,11 @@ public class CarBookingArrayDataAccessService implements CarBookingDao {
             throw new IllegalArgumentException("Booking ID cannot be null.");
         }
 
-        for (CarBooking booking : bookings) {
-            if (booking != null && bookingId.equals(booking.getId())) {
-                booking.setBookingStatus(BookingStatus.CANCELLED);
-                return;
-            }
-        }
+        CarBooking targetBooking = bookings.stream()
+                .filter(booking -> booking != null && bookingId.equals(booking.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Booking with ID " + bookingId + " not found."));
 
-        throw new IllegalStateException("Booking with ID " + bookingId + " not found.");
+        targetBooking.setBookingStatus(BookingStatus.CANCELLED);
     }
 }
