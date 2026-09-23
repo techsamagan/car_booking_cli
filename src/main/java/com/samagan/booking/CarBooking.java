@@ -32,12 +32,6 @@ public class CarBooking implements Serializable {
         this.bookedAt = bookedAt;
     }
 
-    public CarBooking(UUID id, User user, Car car, LocalDate startDate, LocalDate endDate, BigDecimal price, LocalDate now) {
-    }
-
-    public CarBooking(UUID bookingId, UUID userId, UUID carId, LocalDate startDate, LocalDate endDate, BookingStatus status) {
-    }
-
     public UUID getId() {
         return id;
     }

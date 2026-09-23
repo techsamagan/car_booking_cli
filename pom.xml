@@ -15,7 +15,33 @@
         <exec.mainClass>com.samagan.Main</exec.mainClass>
     </properties>
 
+    <!-- AssertJ and Mockito both pull Byte Buddy in at the same depth, so Maven's
+         "first declaration wins" would otherwise resolve AssertJ's older 1.14.x,
+         which does not support Java 23 bytecode and breaks mocking of concrete
+         classes. Pin it to the version Mockito expects. -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>1.17.5</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>1.17.5</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- JavaFaker for the faker DAO implementations -->
+        <dependency>
+            <groupId>com.github.javafaker</groupId>
+            <artifactId>javafaker</artifactId>
+            <version>1.0.2</version>
+        </dependency>
+
         <!-- JUnit 5 for unit testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -36,18 +62,38 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
-            <version>5.11.0</version>
+            <version>5.18.0</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Pinned so JUnit 5 tests are actually discovered and run -->
+            <!-- Exposes ${org.mockito:mockito-core:jar} for the surefire argLine below -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Pinned so JUnit 5 tests are actually discovered and run.
+                 Mockito is attached as an explicit -javaagent: JDK 23 no longer
+                 allows it to self-attach at runtime, which mocking the concrete
+                 UserService/CarService classes depends on. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
+                <configuration>
+                    <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                </configuration>
             </plugin>
 
             <!-- Runnable jar: java -jar target/samagan-car-booking-cli-1.0-SNAPSHOT.jar -->

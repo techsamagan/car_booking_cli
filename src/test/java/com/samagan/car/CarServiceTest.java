@@ -13,6 +13,8 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -21,35 +23,76 @@ class CarServiceTest {
     @Mock
     private CarDao carDao;
 
-    private CarService carService;
+    private CarService underTest;
 
     private Car tesla;
     private Car toyota;
 
     @BeforeEach
     void setUp() {
-        carService = new CarService(carDao);
+        underTest = new CarService(carDao);
         tesla = new Car(UUID.randomUUID(), "EV-001", new BigDecimal("120.00"), Brand.TESLA, true);
         toyota = new Car(UUID.randomUUID(), "TY-002", new BigDecimal("45.00"), Brand.TOYOTA, false);
     }
 
     @Test
-    @DisplayName("getAllElectricCars returns only the electric ones")
-    void getAllElectricCarsFiltersByElectric() {
+    @DisplayName("getAllCars delegates to the DAO")
+    void itShouldGetAllCars() {
+        // Given
         when(carDao.getCars()).thenReturn(List.of(tesla, toyota));
 
-        assertThat(carService.getAllElectricCars()).containsExactly(tesla);
+        // When / Then
+        assertThat(underTest.getAllCars()).containsExactly(tesla, toyota);
+        verify(carDao).getCars();
+    }
+
+    @Test
+    @DisplayName("getCarById returns the car the DAO finds")
+    void itShouldGetCarById() {
+        // Given
+        when(carDao.findCarById(tesla.getId())).thenReturn(tesla);
+
+        // When / Then
+        assertThat(underTest.getCarById(tesla.getId())).isEqualTo(tesla);
     }
 
     @Test
     @DisplayName("getCarById returns null for a null id without hitting the DAO")
-    void getCarByIdReturnsNullForNullId() {
-        assertThat(carService.getCarById(null)).isNull();
+    void itShouldReturnNullForNullId() {
+        assertThat(underTest.getCarById(null)).isNull();
+        verifyNoInteractions(carDao);
+    }
+
+    @Test
+    @DisplayName("getCarByRegNumber returns the car the DAO finds")
+    void itShouldGetCarByRegNumber() {
+        // Given
+        when(carDao.findCarByRegNumber("EV-001")).thenReturn(tesla);
+
+        // When / Then
+        assertThat(underTest.getCarByRegNumber("EV-001")).isEqualTo(tesla);
+    }
+
+    @Test
+    @DisplayName("getCarByRegNumber returns null for a blank reg number without hitting the DAO")
+    void itShouldReturnNullForBlankRegNumber() {
+        assertThat(underTest.getCarByRegNumber("  ")).isNull();
+        verifyNoInteractions(carDao);
+    }
+
+    @Test
+    @DisplayName("getAllElectricCars returns only the electric ones")
+    void itShouldGetOnlyElectricCars() {
+        // Given
+        when(carDao.getCars()).thenReturn(List.of(tesla, toyota));
+
+        // When / Then
+        assertThat(underTest.getAllElectricCars()).containsExactly(tesla);
     }
 
     @Test
     @DisplayName("constructor rejects a null CarDao")
-    void constructorRejectsNullDao() {
+    void itShouldRejectNullDao() {
         assertThatThrownBy(() -> new CarService(null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("CarDao cannot be null");

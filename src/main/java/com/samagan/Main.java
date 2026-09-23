@@ -8,10 +8,12 @@ import com.samagan.booking.CarBookingService;
 import com.samagan.car.Car;
 import com.samagan.car.CarArrayDataAccessService;
 import com.samagan.car.CarDao;
+import com.samagan.car.CarFakerDataAccessService;
 import com.samagan.car.CarService;
 import com.samagan.user.User;
 import com.samagan.user.UserArrayDataAccessService;
 import com.samagan.user.UserDao;
+import com.samagan.user.UserFakerDataAccessService;
 import com.samagan.user.UserService;
 
 import java.time.LocalDate;
@@ -29,10 +31,13 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         // Wiring & Dependency Injection
-        UserDao userDao = new UserArrayDataAccessService();
-        CarDao carDao = new CarArrayDataAccessService();
-
         // Easily swap DAO implementations:
+        UserDao userDao = new UserArrayDataAccessService();
+        // UserDao userDao = new UserFakerDataAccessService();
+
+        CarDao carDao = new CarArrayDataAccessService();
+        // CarDao carDao = new CarFakerDataAccessService();
+
         CarBookingDao carBookingDao = new CarBookingArrayDataAccessService();
         // CarBookingDao carBookingDao = new CarBookingFileDataAccessService("bookings.csv", userDao, carDao);
 
