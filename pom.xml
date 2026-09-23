@@ -13,6 +13,9 @@
         <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <exec.mainClass>com.samagan.Main</exec.mainClass>
+        <!-- Empty by default; resolves to whatever an agent-based plugin (e.g. JaCoCo)
+             injects, so the surefire argLine below extends it instead of replacing it. -->
+        <argLine></argLine>
     </properties>
 
     <!-- AssertJ and Mockito both pull Byte Buddy in at the same depth, so Maven's
@@ -92,7 +95,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <argLine>-javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
                 </configuration>
             </plugin>
 
