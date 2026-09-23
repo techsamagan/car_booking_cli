@@ -28,3 +28,12 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Maven ###
+target/
+
+### IntelliJ files regenerated from pom.xml on Maven import ###
+*.iml
+.idea/compiler.xml
+.idea/encodings.xml
+.idea/jarRepositories.xml
