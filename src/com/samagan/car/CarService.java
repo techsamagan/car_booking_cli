@@ -34,15 +34,10 @@ public class CarService {
     }
 
     public List<Car> getAllElectricCars() {
-        List<Car> all = carDao.getCars();
-        List<Car> electricCars = new ArrayList<>();
 
-        for (Car car : all) {
-            if (car != null && car.isElectric()) {
-                electricCars.add(car);
-            }
-        }
+        return carDao.getCars().stream()
+                .filter(car -> car != null && car.isElectric())
+                .toList();
 
-        return electricCars;
     }
 }
